@@ -1,0 +1,30 @@
+--- app.py	2026-06-22 04:19:34.528209989 -0500
++++ app_new.py	2026-06-22 08:35:22.666040183 -0500
+@@ -163,16 +163,17 @@
+     if not target_url:
+         return "Missing url parameter", 400
+     try:
+-        # Forward client's Origin and Referer if present, else use defaults
+-        origin = request.headers.get('Origin')
+-        referer = request.headers.get('Referer')
+-        headers = {}
+-        if origin:
+-            headers['Origin'] = origin
+-        if referer:
+-            headers['Referer'] = referer
+-        if not headers:
+-            headers = TARGET_HEADERS
++        # Build headers to forward: copy client headers except hop-by-hop
++        excluded = {'host', 'content-length', 'connection', 'keep-alive',
++                    'proxy-authenticate', 'proxy-authorization', 'te', 'trailers',
++                    'transfer-encoding', 'upgrade'}
++        headers = {k: v for k, v in request.headers
++                   if k.lower() not in excluded}
++        # Ensure Origin and Referer are present; fallback to TARGET_HEADERS if not provided by client
++        if 'Origin' not in headers:
++            headers['Origin'] = TARGET_HEADERS['Origin']
++        if 'Referer' not in headers:
++            headers['Referer'] = TARGET_HEADERS['Referer']
+         resp = fetch_with_headers(target_url, headers=headers, stream=True)
+         resp.raise_for_status()
+     except Exception as e:
